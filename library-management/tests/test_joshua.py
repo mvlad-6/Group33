@@ -124,3 +124,79 @@ def test_reservation_missing_member(client):
     assert response.status_code == 404
     assert response.get_json()['error'] == 'Member not found'
     assert client.get('/reservations').get_json() == []
+
+# Test for creating a member
+def test_create_member(client):
+    response = client.post('/members', json={
+        'name': 'test', 'email': 'test@example.com'
+    })
+
+    assert response.status_code == 201
+    member = response.get_json()
+    assert member['name'] == 'test'
+    assert member['email'] == 'test@example.com'
+    assert client.get('/members/1').get_json() == member
+
+
+# Test for listing members
+def test_list_members(client):
+    client.post('/members', json={
+        'name': 'test', 'email': 'test@example.com'
+    })
+    client.post('/members', json={
+        'name': 'testing', 'email': 'testing@example.com'
+    })
+
+    response = client.get('/members')
+    assert response.status_code == 200
+    members = response.get_json()
+    assert len(members) == 2
+    assert members[0]['name'] == 'test'
+    assert members[1]['name'] == 'testing'
+
+
+# Test for getting a member by ID
+def test_get_member(client):
+    client.post('/members', json={
+        'name': 'test', 'email': 'test@example.com'
+    })
+
+    response = client.get('/members/1')
+    assert response.status_code == 200
+    assert response.get_json()['id'] == 1
+    assert response.get_json()['name'] == 'test'
+    assert response.get_json()['email'] == 'test@example.com'
+
+
+# Test for updating a member
+def test_update_member(client):
+    client.post('/members', json={
+        'name': 'test', 'email': 'test@example.com'
+    })
+
+    response = client.put('/members/1', json={'name': 'testing'})
+    assert response.status_code == 200
+
+    member = client.get('/members/1').get_json()
+    assert member['name'] == 'testing'
+    assert member['email'] == 'test@example.com'
+
+
+# Test for deleting a member
+def test_delete_member(client):
+    client.post('/members', json={
+        'name': 'test', 'email': 'test@example.com'
+    })
+
+    response = client.delete('/members/1')
+    assert response.status_code == 204
+    assert client.get('/members').get_json() == []
+    assert client.get('/members/1').status_code == 404
+
+
+# Test for a nonexistent member
+def test_missing_member(client):
+    response = client.get('/members/999')
+
+    assert response.status_code == 404
+    assert response.get_json()['error'] == 'Member not found'
