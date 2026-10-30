@@ -200,3 +200,64 @@ def test_missing_member(client):
 
     assert response.status_code == 404
     assert response.get_json()['error'] == 'Member not found'
+
+# Test for stopping another member from taking a reserved book
+def test_reserved_book_blocks_other_member(client):
+    client.post('/books', json={
+        'title': 'test', 'author': 'testing', 'isbn': 'test'
+    })
+    client.post('/members', json={'name': 'test', 'email': 'test@example.com'})
+    client.post('/members', json={'name': 'testing', 'email': 'testing@example.com'})
+    client.post('/loans', json={'book_id': 1, 'member_id': 1})
+    client.post('/reservations', json={'book_id': 1, 'member_id': 2})
+    client.put('/loans/1/return')
+
+    response = client.post('/loans', json={'book_id': 1, 'member_id': 1})
+    assert response.status_code == 409
+    assert response.get_json()['error'] == 'Book reserved for another member'
+    assert client.get('/books/1').get_json()['available_copies'] == 1
+    assert len(client.get('/loans').get_json()) == 1
+    assert client.get('/reservations').get_json()[0]['fulfilled'] is False
+
+
+# Test for fulfilling reservations in order
+def test_reserved_book_checkout_fulfills_reservation(client):
+    client.post('/books', json={
+        'title': 'test', 'author': 'testing', 'isbn': 'test'
+    })
+    client.post('/members', json={'name': 'test', 'email': 'test@example.com'})
+    client.post('/members', json={'name': 'testing', 'email': 'testing@example.com'})
+    client.post('/loans', json={'book_id': 1, 'member_id': 1})
+    client.post('/reservations', json={'book_id': 1, 'member_id': 2})
+    client.post('/reservations', json={'book_id': 1, 'member_id': 1})
+    client.put('/loans/1/return')
+
+    response = client.post('/loans', json={'book_id': 1, 'member_id': 2})
+    assert response.status_code == 201
+    assert response.get_json()['member_id'] == 2
+    assert client.get('/books/1').get_json()['available_copies'] == 0
+    reservations = client.get('/reservations').get_json()
+    assert reservations[0]['fulfilled'] is True
+    assert reservations[1]['fulfilled'] is False
+
+    client.put('/loans/2/return')
+    response = client.post('/loans', json={'book_id': 1, 'member_id': 1})
+    assert response.status_code == 201
+    assert client.get('/reservations').get_json()[1]['fulfilled'] is True
+    assert len(client.get('/loans').get_json()) == 3
+
+
+# Test for keeping a reservation waiting when no copy is available
+def test_reserved_book_needs_available_copy(client):
+    client.post('/books', json={
+        'title': 'test', 'author': 'testing', 'isbn': 'test', 'total_copies': 0
+    })
+    client.post('/members', json={'name': 'test', 'email': 'test@example.com'})
+    client.post('/reservations', json={'book_id': 1, 'member_id': 1})
+
+    response = client.post('/loans', json={'book_id': 1, 'member_id': 1})
+    assert response.status_code == 409
+    assert response.get_json()['error'] == 'No copies available'
+    assert client.get('/books/1').get_json()['available_copies'] == 0
+    assert client.get('/loans').get_json() == []
+    assert client.get('/reservations').get_json()[0]['fulfilled'] is False
