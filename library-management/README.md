@@ -51,9 +51,33 @@ app working without a REST client, and calls the same in-memory store.
 | GET | `/members/<id>` | Get one member |
 | PUT | `/members/<id>` | Update a member |
 | DELETE | `/members/<id>` | Delete a member |
-| POST | `/loans` | Check out a book (`book_id`, `member_id`) |
+| POST | `/loans` | Check out a book (`book_id`, `member_id`); respects the first waiting reservation and requires an available copy |
 | PUT | `/loans/<id>/return` | Return a loaned book |
 | GET | `/loans?member_id=&book_id=` | Look up loans |
+| GET | `/reservations?member_id=&book_id=` | List reservations, optionally filtered by member or book |
+| POST | `/reservations` | Reserve a book (`book_id`, `member_id`) |
+
+## Reservation checkout enhancement (Joshua, R19)
+
+Create a reservation with `POST /reservations`, for example
+`{"book_id": 1, "member_id": 2}`. After a copy is returned, use
+`POST /loans` with the same book and member IDs to borrow it.
+
+API checkout checks unfulfilled reservations in creation order. Only the
+member with the first waiting reservation can borrow that book while a
+reservation is pending. Successful checkout marks that reservation fulfilled
+and decreases availability. This is a simple first-in-first-out policy,
+including when a title has multiple copies; reservation expiry is not implemented.
+
+Checkout returns 409 with `No copies available` if availability is zero or
+negative, or `Book reserved for another member` if another member is first
+in line. Rejected requests do not create a loan or fulfill a reservation.
+With no waiting reservation, normal API checkout is unchanged except for
+the availability check.
+
+This enhancement applies to the JSON API. The existing HTML checkout form
+uses separate code and does not enforce these rules. Member authentication
+is also absent, so R19 is only partially satisfied by this enhancement.
 
 ## Tests
 
