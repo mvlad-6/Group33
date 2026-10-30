@@ -29,6 +29,18 @@ def checkout_book():
     if book is None:
         return jsonify({"error": "Book not found"}), 404
 
+    if book.available_copies <= 0:
+        return jsonify({"error": "No copies available"}), 409
+
+    reservation = None
+    for item in store.reservations.values():
+        if item.book_id == book.id and not item.fulfilled:
+            reservation = item
+            break
+
+    if reservation is not None and reservation.member_id != data["member_id"]:
+        return jsonify({"error": "Book reserved for another member"}), 409
+
     book.available_copies -= 1
 
     loan_id = store.next_id("loan")
@@ -39,6 +51,8 @@ def checkout_book():
         due_date=Loan.default_due_date(),
     )
     store.loans[loan_id] = loan
+    if reservation is not None:
+        reservation.fulfilled = True
     return jsonify(loan.to_dict()), 201
 
 
