@@ -54,6 +54,8 @@ app working without a REST client, and calls the same in-memory store.
 | POST | `/loans` | Check out a book (`book_id`, `member_id`) |
 | PUT | `/loans/<id>/return` | Return a loaned book |
 | GET | `/loans?member_id=&book_id=` | Look up loans |
+| GET | `/loans/overdue` | Retrieves all currently overdue loans. | None | `200 OK`, `[{"id": 1, "book_id": 1, ...}]` |
+| GET | `/members/<id>/loans` | Retrieves all loans for a specific member. | None | `200 OK`, `[{"id": 1, "book_id": 1, ...}]` |
 
 ## Tests
 
