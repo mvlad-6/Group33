@@ -5,6 +5,9 @@ from flask import Blueprint, jsonify, request
 from app import store
 from app.models.loan import Loan, LOAN_PERIOD_DAYS
 
+from datetime import datetime, timezone
+
+
 FINE_PER_DAY = 0.25  # dollars charged per day overdue
 
 loans_bp = Blueprint("loans", __name__, url_prefix="/loans")
@@ -83,3 +86,15 @@ def get_fine(loan_id):
     fine_amount = round(days_overdue * FINE_PER_DAY, 2)
 
     return jsonify({"loan_id": loan_id, "fine_amount": fine_amount})
+
+@loans_bp.route("/overdue", methods=["GET"])
+def get_overdue_loans():
+    current_time = datetime.now(timezone.utc).isoformat()
+    overdue_loans = []
+    
+    for loan in store.loans.values():
+        # Use dot notation and serialize to dict
+        if not loan.return_date and loan.due_date and loan.due_date < current_time:
+            overdue_loans.append(loan.to_dict())
+            
+    return overdue_loans, 200

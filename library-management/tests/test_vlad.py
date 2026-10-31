@@ -181,3 +181,34 @@ def test_renew_loan(client):
     assert response.status_code == 200
     loan_data = response.get_json()
     assert "due_date" in loan_data
+
+def test_get_member_loans(client):
+    """Tests retrieving all loans for a specific member"""
+    client.post(
+        "/members",
+        json = {"name": "jimmy", "email": "jimmy@gmail.com"}
+    )
+    
+    client.post(
+        "/books",
+        json = {"title": "121212", "author": "212121", "isbn": "8888", "total_copies": 2}
+    )
+    
+    client.post(
+        "/loans",
+        json = {"book_id": 1, "member_id": 1}
+    )
+    
+    response = client.get("/members/1/loans")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert len(data) >= 1
+    assert data[-1]["member_id"] == 1
+    assert data[-1]["book_id"] == 1
+
+def test_get_overdue_loans(client):
+    """Tests retrieving overdue loans list"""
+    response = client.get("/loans/overdue")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
