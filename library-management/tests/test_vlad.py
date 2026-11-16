@@ -1,7 +1,4 @@
 import pytest 
-from unittest.mock import patch
-from app import store
-from datetime import date
 
 def test_add_book(client):
     """Tests adding book to catalog"""
@@ -185,7 +182,6 @@ def test_renew_loan(client):
     loan_data = response.get_json()
     assert "due_date" in loan_data
 
-@pytest.mark.xfail()
 def test_get_member_loans(client):
     """Tests retrieving all loans for a specific member"""
     client.post(
@@ -216,32 +212,3 @@ def test_get_overdue_loans(client):
     assert response.status_code == 200
     data = response.get_json()
     assert isinstance(data, list)
-
-def test_overdue_notification_sent_successful(client):
-
-    client.post(
-        "/members",
-        json = {"name": "jimmy", "email": "jimmy@gmail.com"}
-    )
-        
-    client.post(
-        "/books",
-        json = {"title": "121212", "author": "212121", "isbn": "8888", "total_copies": 2}
-    )
-    
-    client.post(
-        "/loans",
-        json = {"book_id": 1, "member_id": 1}
-    )
-
-    store.loans[1].due_date = date(2006, 6, 15)
-    with patch("app.routes.loans.send_notification", return_value = True) as mock_send:
-
-        response = client.get("/loans/overdue")
-
-        assert response.status_code == 200
-        data = response.get_json()
-        assert len(data) == 1
-        assert data[0]["notified"] is True
-
-        mock_send.assert_called_once_with("jimmy@gmail.com", "Overdue Book.", f"Book with ID: 1, come in and return it please.")

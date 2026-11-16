@@ -7,8 +7,6 @@ from app.models.loan import Loan, LOAN_PERIOD_DAYS
 
 from datetime import datetime, timezone
 
-from notification_service import send_notification
-
 
 FINE_PER_DAY = 0.25  # dollars charged per day overdue
 
@@ -110,19 +108,7 @@ def get_overdue_loans():
     
     for loan in store.loans.values():
         # Use dot notation and serialize to dict
-        if not loan.return_date and loan.due_date and str(loan.due_date) < current_time:
-            loan_dict = loan.to_dict()
-
-            member = store.members.get(loan.member_id)
-
-            if member:
-                recipient = member.email
-            else:
-                recipient = "unknown"
-
-            sent = send_notification(recipient, "Overdue Book.", f"Book with ID: {loan.book_id}, come in and return it please." )
-
-            loan_dict["notified"] = sent
-            overdue_loans.append(loan_dict)
+        if not loan.return_date and loan.due_date and loan.due_date < current_time:
+            overdue_loans.append(loan.to_dict())
             
     return overdue_loans, 200
