@@ -95,3 +95,13 @@ def test_loan_form_skips_missing_book(client):
 
     assert response.location == "/ui/loans"
     assert not store.loans
+
+
+def test_home_page_links_to_library_views(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert b"<h1>Library Management System</h1>" in response.data
+    assert b'href="/ui/books">Books</a>' in response.data
+    assert b'href="/ui/members">Members</a>' in response.data
+    assert b'href="/ui/loans">Loans</a>' in response.data
