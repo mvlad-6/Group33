@@ -45,3 +45,14 @@ def delete_member(member_id):
     if member is None:
         return jsonify({"error": "Member not found"}), 404
     return "", 204
+
+@members_bp.route("/<int:member_id>/loans", methods=["GET"])
+def get_member_loans(member_id):
+    if member_id not in store.members:
+        return {"error": "Member not found"}, 404
+
+    member_loans = [
+        loan for loan in store.loans.values() 
+        if loan.member_id == member_id
+    ]
+    return member_loans, 200
