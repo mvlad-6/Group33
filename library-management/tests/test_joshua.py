@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 from app import store
+import pytest
 
 
 # Test for due date boundary
